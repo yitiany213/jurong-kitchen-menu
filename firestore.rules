@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Owners who may see everyone's picks and meal plans on admin.html.
+    // Replace the address below with your own Google account (add more, comma-separated).
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in ['YOUR-EMAIL@gmail.com'];
+    }
+
+    // One document per signed-in person: their name, email, picks and meal plan.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if isOwner();
+    }
+  }
+}

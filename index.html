@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jurong Kitchen Menu</title>
+  <meta name="theme-color" content="#8b2c1d">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <h1>Jurong Kitchen <span class="zh">裕廊厨房</span></h1>
+      <div class="actions">
+        <button id="planBtn" class="pill" type="button">Plan</button>
+        <button id="pickBtn" class="pill primary" type="button">Picks <span id="pickCount" class="badge">0</span></button>
+        <button id="acctBtn" class="pill acct" type="button" hidden>Sign in</button>
+      </div>
+    </div>
+    <div class="searchrow">
+      <input id="search" type="search" placeholder="Search dishes · 搜索菜名" autocomplete="off">
+      <button id="langBtn" class="pill" type="button" aria-label="Switch language">中文</button>
+    </div>
+    <nav id="tabs" class="tabs" aria-label="Categories"></nav>
+  </header>
+
+  <main id="menu"></main>
+  <p id="empty" class="empty" hidden>No dishes match your search.</p>
+  <p id="toast" class="toast" role="status" hidden></p>
+
+  <dialog id="dish" class="sheet">
+    <img id="dImg" alt="">
+    <div class="body">
+      <h2 id="dEn"></h2>
+      <p id="dZh" class="zh big"></p>
+      <p id="dDesc"></p>
+      <p class="note">Picture is an AI illustration — the actual dish may look different.</p>
+      <div class="planpick">
+        <span class="label">Add to meal plan</span>
+        <select id="dDay" class="sel" aria-label="Day"></select>
+        <select id="dMeal" class="sel" aria-label="Meal">
+          <option value="lunch">Lunch</option>
+          <option value="dinner">Dinner</option>
+        </select>
+        <button id="dPlan" class="pill" type="button">Add to plan</button>
+      </div>
+      <div class="row">
+        <button id="dClose" class="pill" type="button">Close</button>
+        <button id="dPick" class="pill primary" type="button"></button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="picks" class="sheet">
+    <div class="body">
+      <h2>My picks</h2>
+      <ul id="pickList"></ul>
+      <p id="pickEmpty" class="empty">Tap ＋ on any dish to add it here.</p>
+      <div class="row">
+        <button id="pClear" class="pill" type="button">Clear all</button>
+        <button id="pClose" class="pill" type="button">Close</button>
+        <button id="pShare" class="pill primary" type="button">Share list</button>
+      </div>
+      <p id="pMsg" class="note" role="status"></p>
+    </div>
+  </dialog>
+
+  <dialog id="plan" class="sheet wide">
+    <div class="body">
+      <div class="planhead">
+        <button id="wkPrev" class="pill" type="button" aria-label="Previous week">‹</button>
+        <h2 id="wkTitle"></h2>
+        <button id="wkNext" class="pill" type="button" aria-label="Next week">›</button>
+      </div>
+      <div id="planDays"></div>
+      <div class="row">
+        <button id="planClear" class="pill" type="button">Clear week</button>
+        <button id="planClose" class="pill" type="button">Close</button>
+        <button id="planShare" class="pill primary" type="button">Share week</button>
+      </div>
+      <p id="planMsg" class="note" role="status"></p>
+    </div>
+  </dialog>
+
+  <dialog id="signin" class="sheet">
+    <div class="body">
+      <h2>Sign in with Google</h2>
+      <p>Signing in saves your picks and meal plan to your account, so they follow you to any device.</p>
+      <p class="note">Jurong Kitchen will see your name, email address and the dishes you add.</p>
+      <div class="row">
+        <button id="sCancel" class="pill" type="button">Cancel</button>
+        <button id="sGo" class="pill primary" type="button">Continue with Google</button>
+      </div>
+      <p id="sMsg" class="note" role="status"></p>
+    </div>
+  </dialog>
+
+  <script src="firebase-config.js"></script>
+  <script src="cloud.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

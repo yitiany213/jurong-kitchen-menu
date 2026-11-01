@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Jurong Kitchen – Who added what</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <h1>Jurong Kitchen <span class="zh">· who added what</span></h1>
+      <div class="actions">
+        <a class="pill" href="./">Menu</a>
+        <button id="acctBtn" class="pill primary" type="button" hidden>Sign in</button>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Views">
+      <a href="#" data-view="dish" class="on">By dish</a>
+      <a href="#" data-view="person">By person</a>
+    </nav>
+  </header>
+
+  <main>
+    <p id="status" class="status"></p>
+    <div id="byDish"></div>
+    <div id="byPerson" hidden></div>
+  </main>
+
+  <script src="firebase-config.js"></script>
+  <script src="cloud.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

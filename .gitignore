@@ -1,0 +1,11 @@
+# Picture working folders (large originals and edit stages; the site only needs images/)
+images_raw/
+images_clean/
+images_tidy/
+images_old/
+
+# Upload folder made by build_site.py
+site/
+
+*.log
+__pycache__/

@@ -1,0 +1,76 @@
+{
+  "name": "Jurong Kitchen",
+  "name_zh": "裕廊厨房",
+  "categories": [
+    {"id": "egg", "en": "Egg", "zh": "蛋类", "dishes": [
+      {"id": "egg-furong", "en": "Fried Furong Egg", "zh": "芙蓉煎蛋", "desc": "A golden, fluffy pan-fried omelette with crisp lacy edges, studded with onion, spring onion and bits of char siew."},
+      {"id": "egg-bittergourd", "en": "Fried Egg with Bitter Gourd", "zh": "苦瓜炒蛋", "desc": "Thin crescents of green bitter gourd stir-fried with soft yellow scrambled egg."},
+      {"id": "egg-prawn", "en": "Fried Egg with Prawn", "zh": "虾仁炒蛋", "desc": "Silky, just-set scrambled egg folded around pink shelled prawns, topped with spring onion."},
+      {"id": "egg-tomato", "en": "Fried Egg with Tomato", "zh": "番茄炒蛋", "desc": "Chunks of red tomato in a glossy sweet-savoury sauce with fluffy scrambled egg and spring onion."},
+      {"id": "egg-onion", "en": "Fried Egg with Onion", "zh": "洋葱炒蛋", "desc": "Sweet softened onion slices stir-fried with golden scrambled egg."},
+      {"id": "egg-longbean", "en": "Fried Egg with Long Bean", "zh": "长豆炒蛋", "desc": "Finely chopped green long beans fried with egg into a savoury, lightly browned omelette."},
+      {"id": "egg-luffa", "en": "Fried Egg with Luffa and Prawn", "zh": "丝瓜虾仁炒蛋", "desc": "Tender pale-green luffa (angled gourd) chunks with prawns and soft egg in a light, clear gravy."},
+      {"id": "egg-steam", "en": "Steam Egg with Pork", "zh": "猪肉蒸蛋", "desc": "Smooth, wobbly steamed egg custard over seasoned minced pork, finished with soy sauce and spring onion."}
+    ]},
+    {"id": "veg", "en": "Vegetable", "zh": "蔬菜", "dishes": [
+      {"id": "veg-seasonal", "en": "Fried Seasonal Vegetable", "zh": "炒时蔬", "desc": "Bright green leafy choy sum stir-fried with garlic until just tender and glossy."},
+      {"id": "veg-eggplant", "en": "Fried Eggplant with Minced Meat", "zh": "鱼香茄子", "desc": "Soft purple eggplant batons braised with minced pork in a sweet, sour and gently spicy yu xiang sauce."},
+      {"id": "veg-xo-broccoli", "en": "XO Broccoli with Scallop", "zh": "XO 西兰花炒带子", "desc": "Vivid green broccoli florets and seared scallops tossed in rich, savoury XO sauce."},
+      {"id": "veg-sambal-kangkong", "en": "Sambal Kang Kong", "zh": "參峇炒空心菜", "desc": "Water spinach wok-fried with fiery red sambal belacan chilli paste."},
+      {"id": "veg-furu-kangkong", "en": "Fermented Beans Kang Kong", "zh": "腐乳炒空心菜", "desc": "Water spinach stir-fried with garlic and creamy fermented bean curd sauce."},
+      {"id": "veg-kailan", "en": "Hong Kong Kai Lan with Garlic", "zh": "蒜蓉炒芥兰", "desc": "Thick-stemmed Chinese kale stir-fried with plenty of golden minced garlic."},
+      {"id": "veg-spinach-egg", "en": "Spinach with Salted & Century Egg", "zh": "金银蛋苋菜", "desc": "Tender spinach in a light golden broth with diced salted egg and dark century egg, plus garlic."}
+    ]},
+    {"id": "seafood", "en": "Seafood", "zh": "海鲜", "dishes": [
+      {"id": "sea-cereal-prawn", "en": "Crispy Cereal Prawn", "zh": "麦片虾", "desc": "Crisp-fried prawns coated in buttery, fragrant golden oat cereal flakes with curry leaves and chilli."},
+      {"id": "sea-steam-fish", "en": "Steam Fish", "zh": "蒸鱼", "desc": "A whole steamed fish in light soy sauce, topped with shredded ginger, spring onion and coriander."},
+      {"id": "sea-beanpaste-fish", "en": "Bean Paste with Fish", "zh": "豆豉蒸鱼", "desc": "Steamed fish topped with savoury fermented black beans, garlic and red chilli."},
+      {"id": "sea-pomfret", "en": "Panfry Pomfret with Ginger", "zh": "姜丝煎鲳鱼", "desc": "A whole pomfret pan-fried until golden and crisp, topped with fine ginger strips and spring onion."}
+    ]},
+    {"id": "meat", "en": "Meat", "zh": "肉类", "dishes": [
+      {"id": "meat-sweetsour-pork", "en": "Sweet & Sour Pork", "zh": "酸甜咕噜肉", "desc": "Crisp battered pork pieces in a glossy red sweet-and-sour sauce with pineapple, capsicum and onion."},
+      {"id": "meat-three-cup-chicken", "en": "Three Cup Chicken", "zh": "三杯鸡", "desc": "Chicken pieces braised in sesame oil, soy sauce and rice wine with garlic, ginger and fresh Thai basil, served in a claypot."},
+      {"id": "meat-chicken-mushroom", "en": "Chicken with Mushroom", "zh": "蘑菇鸡", "desc": "Tender chicken braised with shiitake mushrooms in a savoury brown oyster-sauce gravy."},
+      {"id": "meat-ribs-bittergourd", "en": "Pork Ribs with Bitter Gourd in Black Bean Sauce", "zh": "豆豉苦瓜排骨", "desc": "Pork rib pieces and green bitter gourd braised in fermented black bean and garlic sauce."},
+      {"id": "meat-braised-pork-bun", "en": "Braised Pork with Bun", "zh": "扣肉包", "desc": "Melt-in-the-mouth braised pork belly in dark soy sauce, tucked into soft white folded steamed buns."},
+      {"id": "meat-blackbean-mince", "en": "Black Bean with Minced Pork", "zh": "豆豉猪肉碎", "desc": "Minced pork stir-fried with fermented black beans, garlic and chilli in a glossy, saucy dark gravy, served on its own in a plate with no rice."}
+    ]},
+    {"id": "soup", "en": "Signature Soups", "zh": "招牌汤", "dishes": [
+      {"id": "soup-chyesim", "en": "Chye Sim Soup", "zh": "菜心汤", "desc": "A light, clear broth with tender green choy sum leaves."},
+      {"id": "soup-lotus", "en": "Lotus Root Soup with Pork Ribs & Peanut", "zh": "莲藕花生排骨汤", "desc": "A rosy-brown slow-boiled broth with sliced lotus root showing its lacy holes, pork ribs and peanuts."},
+      {"id": "soup-abc", "en": "ABC Soup", "zh": "ABC 排骨汤", "desc": "A comforting pork rib soup with a clear, light golden broth (not red or orange), chunks of sweet corn on the cob, carrot, potato, onion and a few tomato wedges."},
+      {"id": "soup-watercress", "en": "Fresh Watercress Soup with Pork Ribs", "zh": "西洋菜排骨汤", "desc": "Dark green watercress slow-boiled with pork ribs and red dates in a clear, nourishing broth."},
+      {"id": "soup-radish", "en": "White Radish Pork Rib Soup with Wolfberries", "zh": "白萝卜排骨汤", "desc": "Translucent white radish chunks and pork ribs in a clear broth dotted with red wolfberries."},
+      {"id": "soup-oldcucumber", "en": "Old Cucumber Soup with Pork Ribs and Honey Dates", "zh": "老黄瓜甜枣排骨汤", "desc": "Thick chunks of old cucumber (pale white-green flesh with a thin rough brown-yellow rind and seeds) with pork ribs and honey dates in a sweet, clear broth."},
+      {"id": "soup-wintermelon", "en": "Winter Melon with Pork Ribs", "zh": "冬瓜排骨汤", "desc": "Soft, translucent winter melon cubes and pork ribs in a light, cooling clear soup."},
+      {"id": "soup-blackchicken", "en": "Black Chicken Soup", "zh": "黑鸡汤", "desc": "Black-skinned silkie chicken double-boiled with red dates, wolfberries and Chinese herbs."},
+      {"id": "soup-herbalchicken", "en": "Herbal Chicken Soup", "zh": "药材鸡汤", "desc": "A dark amber herbal broth with chicken pieces, angelica root, red dates and wolfberries."},
+      {"id": "soup-pumpkin", "en": "Pumpkin Soup with Beans", "zh": "南瓜眉豆汤", "desc": "Orange pumpkin chunks and black-eyed beans simmered into a lightly sweet golden soup."},
+      {"id": "soup-sixherb", "en": "Six Herb Soup", "zh": "六味汤", "desc": "A clear, gently sweet soup with lotus seeds, lily bulb, dried longan, yam, barley and wolfberries."},
+      {"id": "soup-bakkutteh", "en": "Pork Rib Soup", "zh": "肉骨茶", "desc": "Singapore-style peppery bak kut teh: meaty pork ribs and whole garlic cloves in a clear, peppery broth."}
+    ]},
+    {"id": "rice", "en": "Rice", "zh": "饭类", "dishes": [
+      {"id": "rice-mixveg-fried", "en": "Mixed Vegetable Fried Rice", "zh": "什锦炒饭", "desc": "Wok-fried rice with egg, diced carrot, green peas, corn and spring onion."},
+      {"id": "rice-kimchi-fried", "en": "Korean Kimchi Fried Rice", "zh": "韩式包菜炒饭", "desc": "Red-tinged kimchi fried rice topped with a sunny-side-up egg, sesame seeds and seaweed strips."},
+      {"id": "rice-gimbap", "en": "Korean Gimbab", "zh": "韩式紫菜饭卷", "desc": "Sliced seaweed rice rolls filled with egg, carrot, spinach, pickled radish and ham, showing colourful cross-sections."},
+      {"id": "rice-claypot-chicken", "en": "Claypot Chicken Rice", "zh": "砂锅炖鸡饭", "desc": "Rice cooked in a claypot with marinated chicken, salted fish and Chinese sausage, glossy with dark soy sauce."},
+      {"id": "rice-claypot-sausage", "en": "Claypot Sausage Rice", "zh": "砂锅腊味饭", "desc": "Claypot rice topped with sliced lap cheong Chinese sausage, waxed duck and greens, drizzled with dark soy."}
+    ]},
+    {"id": "congee", "en": "Congee", "zh": "粥类", "dishes": [
+      {"id": "congee-centuryegg", "en": "Century Egg & Shredded Pork Congee", "zh": "皮蛋瘦肉粥", "desc": "Silky rice porridge with dark century egg pieces and shredded lean pork, topped with spring onion and ginger."},
+      {"id": "congee-abalone", "en": "Chicken & Abalone Congee", "zh": "鸡肉鲍鱼粥", "desc": "Smooth, creamy congee with tender shredded chicken and sliced abalone, garnished with spring onion."},
+      {"id": "congee-tofu", "en": "Tofu Congee", "zh": "豆瓜粥", "desc": "Gentle rice porridge with soft cubes of silken tofu, topped with fried shallots and spring onion."},
+      {"id": "congee-plain", "en": "Plain Congee", "zh": "白粥", "desc": "A simple bowl of smooth white rice porridge, the perfect partner for side dishes."}
+    ]},
+    {"id": "noodles", "en": "Noodles", "zh": "面类", "dishes": [
+      {"id": "noodle-beehoon-knuckle", "en": "Fried Bee Hoon with Pork Knuckle", "zh": "猪脚炒米粉", "desc": "Thin rice vermicelli fried with cabbage and bean sprouts, served with braised pork knuckle in dark sauce."},
+      {"id": "noodle-tanghoon-soup", "en": "Tang Hoon Soup with Pork Ball", "zh": "冬菜肉丸冬粉汤", "desc": "Clear glass noodles in a light broth with handmade pork balls, preserved tianjin cabbage and spring onion."}
+    ]},
+    {"id": "dessert", "en": "Desserts", "zh": "甜品", "dishes": [
+      {"id": "des-beancurd-barley", "en": "Beancurd Skin with Barley & Gingko", "zh": "腐竹白果薏米", "desc": "A milky-white sweet soup with soft beancurd skin, pearl barley and golden gingko nuts."},
+      {"id": "des-redbean", "en": "Red Bean Soup with Orange Peel", "zh": "陈皮红豆汤", "desc": "A thick, warm red bean soup scented with aged tangerine peel."},
+      {"id": "des-greenbean", "en": "Green Bean Soup with Gula Melaka", "zh": "黑糖绿豆汤", "desc": "Mung bean soup sweetened with dark, smoky gula melaka palm sugar."},
+      {"id": "des-tangyuan", "en": "Tangyuan with Peanut Soup", "zh": "汤圆花生汤", "desc": "Soft glutinous rice balls in a creamy, sweet ground peanut soup."}
+    ]}
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Jurong Kitchen Menu",
+  "short_name": "Jurong Kitchen",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#faf6f0",
+  "theme_color": "#8b2c1d",
+  "icons": [{ "src": "images/egg-furong.jpg", "sizes": "512x512", "type": "image/jpeg" }]
+}

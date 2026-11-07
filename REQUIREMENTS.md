@@ -44,7 +44,7 @@ A phone-friendly, bilingual (English / 中文) web menu for Jurong Kitchen, buil
 ## Open Questions
 
 - Prices and availability aren't in the source document — add `price` to `menu.json` if wanted.
-- Firebase has only been tested against `dev_firebase_stub.js`, not the real project (config not yet supplied).
+- Firebase project `jurong-kitchen` (Spark plan, billing unlinked so usage can never be charged; Firestore in asia-southeast1). Set up 2026-11-07 via gcloud + REST; the end-to-end sign-in on the live site was not tested by Claude.
 - People sign in twice: at the Cloudflare gate and again in the app (Firebase). Both use Google; Firebase remembers the device.
 - Adding a person means two lists: Cloudflare's Family policy and Firestore `config/family`.
 - Owner moderation of others' feedback is only via the Firestore console.

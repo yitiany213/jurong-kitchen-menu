@@ -1,5 +1,10 @@
-// Google sign-in and per-person saving are off until this is filled in (see SETUP.md, step 3).
-// Paste the config object Firebase shows for your web app, e.g.
-// window.FIREBASE_CONFIG = { apiKey: "…", authDomain: "…", projectId: "…", appId: "…" };
-// While it is null the menu still works: picks and meal plans are kept on each device only.
-window.FIREBASE_CONFIG = null;
+// Firebase web app "menu" in project jurong-kitchen (free Spark plan). These values are meant to be
+// public: they name the project; firestore.rules and the config/family list are what protect the data.
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyC_IG3s3iyjecJYT9Uh03nThNIivPD2KUw",
+  authDomain: "jurong-kitchen.firebaseapp.com",
+  projectId: "jurong-kitchen",
+  storageBucket: "jurong-kitchen.firebasestorage.app",
+  messagingSenderId: "1090383020901",
+  appId: "1:1090383020901:web:1db18570e7ddb58040178c",
+};

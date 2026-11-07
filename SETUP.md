@@ -41,9 +41,11 @@ the Sign in, Family and Feedback buttons don't appear.
 - **Update the site:** change files here, then commit and push. Cloudflare republishes in a minute or two.
 - **Let someone in:** add their Gmail in **two** places:
   1. Cloudflare Zero Trust → the **Family** policy (gets them through the gate), and
-  2. Firestore → `config/family` → `emails` (lets them save picks and use feedback).
+  2. Firestore → `config/family` → `emails` (lets them save picks and use feedback). Hover the **emails**
+     row and use its **+**; the **Add field** link at the top makes a separate field that doesn't count.
 - **See who picked what:** the **Family** button on the menu, or <https://jurongkitchen.yitiany.com/admin>.
 - **Feedback:** the speech-bubble button. Everyone on the family list can read it; people delete their own.
+  Owners (Firestore `config/family` → `owners`, currently yitiany213@gmail.com) see **Delete** on every message.
 - **Remove someone's data or a message:** Firestore → Data → `users/<their id>` or `feedback/<message>` → delete.
 
 ## Test on this PC

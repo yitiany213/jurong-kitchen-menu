@@ -4,6 +4,7 @@
 // FAMILY below, so ?as=stranger@example.com shows the "not on the family list" path.
 (() => {
   const FAMILY = ["you@example.com", "mum@example.com", "dad@example.com"];
+  const OWNERS = ["you@example.com"];
   const KEY = "stubdb", USERKEY = "stubuser";
   const asParam = new URLSearchParams(location.search).get("as");
   if (asParam) localStorage.setItem(USERKEY, asParam.toLowerCase());
@@ -69,6 +70,7 @@
       doc: (id) => ({
         async get() {
           if (!isFamily()) throw denied();
+          if (coll === "config" && id === "family") return { exists: true, data: () => ({ emails: FAMILY, owners: OWNERS }) };
           const v = (load()[coll] || {})[id];
           return { exists: !!v, data: () => wrap(v || {}) };
         },
@@ -78,7 +80,7 @@
         },
         async delete() {
           const v = (load()[coll] || {})[id];
-          if (!isFamily() || (v && v.uid !== current.uid)) throw denied();
+          if (!isFamily() || (v && v.uid !== current.uid && !OWNERS.includes(current.email))) throw denied();
           write(coll, id, null);
         },
       }),

@@ -13,7 +13,7 @@ A phone-friendly, bilingual (English / 中文) web menu for Jurong Kitchen, buil
 - [x] **Weekly meal plan** — Lunch and Dinner for each day, Monday–Sunday, with previous/next week; add from a dish ("Add to meal plan": today + 13 days) or from the plan's "＋ Add dish" list; share or clear a week.
 - [x] **Private site + Google sign-in** — Cloudflare Access lets only the Family policy's Gmail addresses reach the site. Inside, people sign in with Google (Firebase) so picks (with time added) and meal plans save to their account and follow them across devices; anything added on the device before joins the account. Firestore rules only let accounts in `config/family` read or write. Sign out from the header or footer.
 - [x] **Who's picked what** — the dish detail shows who else picked or planned it; the Family page (`admin.html`) lists everyone's picks and meal plans by dish and by person. Visible to everyone on the Family list.
-- [x] **Feedback board** — message box (speech-bubble button) where family post feedback; everyone can read it; people can delete their own messages (with confirmation). Unsent text is kept as a draft on the device.
+- [x] **Feedback board** — message box (speech-bubble button) where family post feedback; everyone can read it; people can delete their own messages, and owners (`config/family.owners`) can delete any message (with confirmation). Unsent text is kept as a draft on the device.
 
 ## UI/UX
 

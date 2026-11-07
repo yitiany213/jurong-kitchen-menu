@@ -15,6 +15,8 @@ let picks = loadPicks(), plan = store.get("plan", {});
 // user: the signed-in Firebase user (null when signed out or Firebase isn't configured).
 // people: everyone's users/{uid} records, kept live by a Firestore listener.
 let db = null, user = null, people = [], saveTimer = null, stopPeople = null, stopFeedback = null;
+// isOwner: the signed-in email is in config/family.owners, so they can delete anyone's feedback.
+let isOwner = false;
 
 function loadPicks() {
   const v = store.get("picks", {});
@@ -296,7 +298,7 @@ function watchPeople() {
 async function onAuth(u) {
   user = u;
   renderAccount();
-  stopPeople?.(); stopPeople = null; people = [];
+  stopPeople?.(); stopPeople = null; people = []; isOwner = false;
   if (!u) return;
   // The copy on this device belongs to whoever last used it here; don't hand it to someone else.
   if (store.get("owner", u.uid) !== u.uid) { picks = {}; plan = {}; save(); syncPicks(); }
@@ -311,6 +313,8 @@ async function onAuth(u) {
     if ($("plan").open) renderPlan();
     await cloudSave();
     watchPeople();
+    const fam = await db.collection("config").doc("family").get();
+    isOwner = (fam.data()?.owners || []).includes((u.email || "").toLowerCase());
   } catch (e) {
     toast(e.code === "permission-denied" ? notFamily() : "Signed in, but couldn't load your saved list. Check your connection.");
   }
@@ -340,7 +344,8 @@ function watchFeedback() {
         const m = d.data(), at = m.at?.toMillis?.() ?? Date.now();
         return `<article class="msg">
           <header><strong>${esc(m.name || m.email)}</strong> <span class="note">${fmtWhen(at)}</span>
-            ${m.uid === user?.uid ? `<button type="button" class="msgdel" data-delfb="${esc(d.id)}" aria-label="Delete your message">Delete</button>` : ""}</header>
+            ${m.uid === user?.uid || isOwner ? `<button type="button" class="msgdel" data-delfb="${esc(d.id)}" data-mine="${m.uid === user?.uid ? 1 : ""}"
+              aria-label="Delete this message">Delete</button>` : ""}</header>
           <p>${esc(m.text)}</p></article>`;
       }).join("");
   }, (e) => {
@@ -396,7 +401,8 @@ document.addEventListener("click", (e) => {
   }
   const del = e.target.closest("[data-delfb]");
   if (del) {
-    if (!confirm("Delete your message? This can't be undone.")) return;
+    const whose = del.dataset.mine ? "your message" : `this message from ${del.closest(".msg").querySelector("strong").textContent}`;
+    if (!confirm(`Delete ${whose}? This can't be undone.`)) return;
     return db.collection("feedback").doc(del.dataset.delfb).delete()
       .catch(() => toast("Couldn't delete that message."));
   }

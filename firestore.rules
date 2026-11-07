@@ -2,6 +2,7 @@ rules_version = '2';
 
 // Jurong Kitchen. Paste this into Firebase console → Firestore Database → Rules → Publish.
 // Who's allowed: the lowercase Gmail addresses in the document config/family, field `emails` (an array).
+// Owners: field `owners` (an array) in the same document; they can delete any feedback message.
 // Edit that list in Firestore Database → Data to add or remove people; no need to republish the rules.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -12,6 +13,11 @@ service cloud.firestore {
     function family() {
       return signedIn()
         && request.auth.token.email.lower() in get(/databases/$(database)/documents/config/family).data.emails;
+    }
+    // Owners (field `owners` in config/family) can also delete anyone's feedback.
+    function owner() {
+      return signedIn()
+        && request.auth.token.email.lower() in get(/databases/$(database)/documents/config/family).data.get('owners', []);
     }
 
     // The family list itself: readable by family, changed only in the Firebase console.
@@ -25,7 +31,8 @@ service cloud.firestore {
       allow write: if family() && request.auth.uid == uid;
     }
 
-    // Feedback board: everyone in the family can read and post; you can delete only your own messages.
+    // Feedback board: everyone in the family can read and post; you can delete your own messages,
+    // and owners can delete any message.
     match /feedback/{id} {
       allow read: if family();
       allow create: if family()
@@ -33,7 +40,7 @@ service cloud.firestore {
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
         && request.resource.data.text.size() <= 2000;
-      allow delete: if family() && resource.data.uid == request.auth.uid;
+      allow delete: if (family() && resource.data.uid == request.auth.uid) || owner();
     }
   }
 }

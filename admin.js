@@ -1,17 +1,17 @@
-// Owner's page: lists every signed-in person's picks and meal plans, by dish and by person.
-// Only accounts named in firestore.rules can read other people's data; everyone else gets "not allowed".
+// Family page: every signed-in person's picks and meal plans, by dish and by person.
+// Anyone past the Cloudflare Access gate (the Family list) can see this; data comes from /api/state.
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const MEALS = [["lunch", "Lunch"], ["dinner", "Dinner"]];
 const fmtDate = (ms) => new Date(ms).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" });
 const fmtDay = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString("en-SG", { weekday: "short", day: "numeric", month: "short" }); };
 
-let dishes = {}, order = [], db = null, user = null;
+let dishes = {}, order = [], me = null;
 
 function setStatus(msg) { $("status").textContent = msg; }
 
 function chip(p, extra = "") {
-  return `<span class="person-chip">${p.photo ? `<img src="${esc(p.photo)}" alt="" referrerpolicy="no-referrer">` : ""}${esc(p.name || p.email)}${extra}</span>`;
+  return `<span class="person-chip${p.email === me ? " me" : ""}">${esc(p.name || p.email)}${p.email === me ? " (you)" : ""}${extra}</span>`;
 }
 
 function renderByDish(people) {
@@ -31,9 +31,9 @@ function renderByDish(people) {
     <tbody>${rows.map(({ id, pickedBy, plannedBy }) => `<tr>
       <td class="dish"><div class="dishcell"><img src="images/${id}.jpg" alt=""><span>${esc(dishes[id].en)}<br><small class="zh">${esc(dishes[id].zh)}</small></span></div></td>
       <td class="num">${pickedBy.length}</td>
-      <td><div class="who">${pickedBy.map((p) => chip(p, ` <span class="when">${fmtDate(p.picks[id])}</span>`)).join("")}</div></td>
+      <td data-label="Picked by"><div class="who">${pickedBy.map((p) => chip(p, ` <span class="when">${fmtDate(p.picks[id])}</span>`)).join("")}</div></td>
       <td class="num">${plannedBy.length}</td>
-      <td><div class="who">${plannedBy.map(({ p, days }) => chip(p, ` <span class="when">${days.map(fmtDay).join(", ")}</span>`)).join("")}</div></td>
+      <td data-label="Planned by"><div class="who">${plannedBy.map(({ p, days }) => chip(p, ` <span class="when">${days.map(fmtDay).join(", ")}</span>`)).join("")}</div></td>
     </tr>`).join("")}</tbody></table></div>`;
 }
 
@@ -43,9 +43,9 @@ function renderByPerson(people) {
     const picks = Object.entries(p.picks || {}).filter(([id]) => dishes[id]).sort((a, b) => a[1] - b[1]);
     const days = Object.keys(p.plan || {}).sort();
     return `<article class="person">
-      <header>${p.photo ? `<img class="avatar" src="${esc(p.photo)}" alt="" referrerpolicy="no-referrer">` : ""}
-        <div><h3>${esc(p.name || "(no name)")}</h3><div class="email">${esc(p.email)}</div>
-        ${p.updatedAt ? `<div class="updated">Last change ${fmtDate(p.updatedAt.toMillis())}</div>` : ""}</div></header>
+      <header>
+        <div><h3>${esc(p.name || "(no name)")}${p.email === me ? " (you)" : ""}</h3><div class="email">${esc(p.email)}</div>
+        ${p.updatedAt ? `<div class="updated">Last change ${fmtDate(p.updatedAt)}</div>` : ""}</div></header>
       <h4>Picks (${picks.length})</h4>
       ${picks.length ? `<ul>${picks.map(([id, t]) => `<li>${esc(dishes[id].en)} <small class="zh">${esc(dishes[id].zh)}</small> <span class="when">added ${fmtDate(t)}</span></li>`).join("")}</ul>` : '<p class="note">None</p>'}
       <h4>Meal plan</h4>
@@ -58,16 +58,17 @@ function renderByPerson(people) {
 async function load() {
   setStatus("Loading…");
   try {
-    const snap = await db.collection("users").get();
-    const people = snap.docs.map((d) => d.data()).sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+    const r = await fetch("/api/state");
+    if (!r.ok) throw new Error(r.status === 503 ? "storage isn't connected yet — see SETUP.md" : `error ${r.status}`);
+    const data = await r.json();
+    me = data.me;
+    const people = data.people.sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
     renderByDish(people);
     renderByPerson(people);
-    setStatus(`${people.length} ${people.length === 1 ? "person has" : "people have"} signed in.`);
+    setStatus(`${people.length} ${people.length === 1 ? "person has" : "people have"} used the menu.`);
   } catch (e) {
     $("byDish").innerHTML = $("byPerson").innerHTML = "";
-    setStatus(e.code === "permission-denied"
-      ? `${user.email} isn't on the owner list. Add it to firestore.rules (see SETUP.md, step 4).`
-      : `Couldn't load the data (${e.code || e.message}).`);
+    setStatus(`Couldn't load who picked what (${e.message}). This page only works on the live site.`);
   }
 }
 
@@ -78,21 +79,8 @@ document.querySelectorAll("[data-view]").forEach((a) => a.addEventListener("clic
   $("byPerson").hidden = a.dataset.view !== "person";
 }));
 
-$("acctBtn").addEventListener("click", async () => {
-  if (user) { await firebase.auth().signOut(); return; }
-  try { await googleSignIn(); } catch (e) { setStatus(`Sign-in didn't work (${e.code || e.message}).`); }
-});
-
 (async () => {
   const menu = await (await fetch("menu.json")).json();
   menu.categories.forEach((c) => c.dishes.forEach((d) => { dishes[d.id] = d; order.push(d.id); }));
-  try { db = await loadFirebase(); } catch (e) { return setStatus(`Couldn't load Firebase (${e.message}).`); }
-  if (!db) return setStatus("Google sign-in isn't set up yet. Follow SETUP.md, then reload this page.");
-  $("acctBtn").hidden = false;
-  firebase.auth().onAuthStateChanged((u) => {
-    user = u;
-    $("acctBtn").textContent = u ? "Sign out" : "Sign in";
-    if (u) load();
-    else { $("byDish").innerHTML = $("byPerson").innerHTML = ""; setStatus("Sign in with the owner's Google account to see who added what."); }
-  });
+  load();
 })();

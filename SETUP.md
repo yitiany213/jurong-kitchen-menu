@@ -1,82 +1,43 @@
-# Publishing Jurong Kitchen with Google sign-in
+# How Jurong Kitchen is hosted
 
-The menu works without any of this: picks and meal plans are then saved on each phone only.
-These steps turn on **Sign in with Google** so each person's picks and meal plan are saved to
-their account, and you can see **who added which dish** on `admin.html`.
+Everything runs on Cloudflare's free plan:
 
-Everything below is free for a family-sized site (Firebase "Spark" plan, Cloudflare Pages and Access).
-Takes about 20 minutes.
+| Piece | What it does | Where to change it |
+|---|---|---|
+| **Cloudflare Pages** (project `jurongkitchen`) | Serves the site at <https://jurongkitchen.yitiany.com> from the `main` branch of <https://github.com/yitiany213/jurong-kitchen-menu>. Redeploys on every push. | Workers & Pages → jurongkitchen |
+| **Cloudflare Access** (Zero Trust, team `rapid-sky-08d2`) | Only Gmail addresses on the **Family** policy get in, signing in with Google. `/privacy` and `/terms` are open to everyone; `jurongkitchen.pages.dev` is blocked for everyone. | Zero Trust → Access controls → Applications |
+| **Pages Functions** (`functions/api/`) | `/api/state` saves each person's picks and meal plan; `/api/feedback` is the shared feedback board. They read who's signed in from Cloudflare Access. | Code in this folder |
+| **Workers KV** (binding `JK`) | Stores the picks, meal plans and feedback. | Storage & databases → KV |
 
-## 1. Create a Firebase project
+## One-time: connect the storage (KV)
 
-1. Go to <https://console.firebase.google.com> and sign in with your Google account.
-2. **Create a project** → name it e.g. `jurong-kitchen` → you can turn Google Analytics off → **Create**.
+Without this the menu still works, but picks and plans stay on each phone, and the Family page
+and Feedback button don't appear.
 
-## 2. Turn on Google sign-in and the database
+1. Cloudflare dashboard → **Storage & databases → Workers KV → Create instance** → name `jurongkitchen` → **Create**.
+2. **Workers & Pages → jurongkitchen → Settings → Bindings → Add → KV namespace**:
+   variable name `JK` (capitals), namespace `jurongkitchen` → **Save**.
+3. Redeploy so the binding takes effect: **Deployments → … on the latest → Retry deployment**
+   (or push any commit).
 
-1. Left menu **Build → Authentication → Get started → Sign-in method → Google** → Enable →
-   pick your support email → **Save**.
-2. Left menu **Build → Firestore Database → Create database** → choose a location near you
-   (e.g. `asia-southeast1` Singapore) → **Start in production mode** → **Create**.
+## Day to day
 
-## 3. Connect the website to the project
+- **Update the site:** change files here, then commit and push. Cloudflare republishes in a minute or two.
+- **Let someone in:** add their Gmail to the **Family** policy (Zero Trust → Access controls → Policies).
+  If the Google app is still in Testing, also add them under **Test users** in Google Auth Platform → Audience.
+- **See who picked what:** the **Family** button on the menu, or <https://jurongkitchen.yitiany.com/admin>.
+  Everyone on the Family list can see this page.
+- **Feedback:** the speech-bubble button on the menu. Everyone can read it; people can delete their own messages.
+- **Remove someone's data or a feedback message:** Storage & databases → Workers KV → `jurongkitchen` →
+  delete the key `user:<their email>` or the `fb:…` message.
 
-1. Project overview (house icon) → **Add app → Web (`</>`)** → nickname `menu` → leave
-   "Firebase Hosting" unticked → **Register app**.
-2. Firebase shows a `firebaseConfig = { … }` block. Copy the `{ … }` part.
-3. Open `firebase-config.js` in this folder and replace `null` with it, so it reads:
+## Test on this PC
 
-   ```js
-   window.FIREBASE_CONFIG = { apiKey: "…", authDomain: "…", projectId: "…", storageBucket: "…", messagingSenderId: "…", appId: "…" };
-   ```
-
-   These values are meant to be public — they identify the project; the rules in step 4 are what protect the data.
-
-## 4. Choose who can see everyone's data
-
-1. Open `firestore.rules` and replace `YOUR-EMAIL@gmail.com` with your Google account
-   (add others like `['you@gmail.com', 'partner@gmail.com']`).
-2. Firebase console → **Firestore Database → Rules** → replace everything with the contents of
-   `firestore.rules` → **Publish**.
-
-The rules let each person read and change only their own list, and let only the emails you listed read everyone's.
-
-**Test it now on this PC:** double-click `Run.bat`, sign in on the menu, add a dish, then open
-<http://localhost:8780/admin.html> and sign in with your owner account. (Firebase allows `localhost` by default.)
-
-## 5. Publish the website
-
-The site is published with Cloudflare Pages (project `jurongkitchen`) at
-<https://jurongkitchen.yitiany.com>, from the `main` branch of
-<https://github.com/yitiany213/jurong-kitchen-menu>. Cloudflare Access limits it to the Gmail
-addresses listed in the Zero Trust policy; only `/privacy` is open to everyone.
-
-1. Firebase console → **Authentication → Settings → Authorized domains → Add domain** →
-   `jurongkitchen.yitiany.com`. Sign-in won't work on the live site until you do this.
-2. Commit and push the `firebase-config.js` and `firestore.rules` changes from steps 3–4:
-
-   ```
-   git add firebase-config.js firestore.rules
-   git commit -m "Turn on Google sign-in"
-   git push
-   ```
-
-To update the site later: change files here, then commit and push. Cloudflare republishes in a minute or two.
-
-To let someone new in: add their Gmail to the Access policy in Cloudflare Zero Trust (and, if the
-Google app is still in Testing, to **Test users** in Google Auth Platform → Audience).
-
-## 6. See who added what
-
-Open <https://jurongkitchen.yitiany.com/admin> and sign in with an owner account.
-
-- **By dish** — each dish with the people who picked it (and when) and whose meal plans it's in (and which days).
-- **By person** — each person's name, email, picks with dates, and their meal plan.
-
-Only people who signed in appear. Anything someone adds before signing in stays on their phone
-until they sign in, then it joins their account.
+Double-click `Run.bat` (runs `dev_server.py`). It fakes the Cloudflare parts so everything works
+locally, saving to `.devdata.json`. You're `you@example.com`; add `?as=mum@example.com` to the
+address to act as someone else.
 
 ## Privacy
 
-People see a note before signing in that you will see their name, email and the dishes they add.
-Their data lives in your Firebase project; you can delete a person under **Firestore Database → Data → users**.
+The privacy policy (`privacy.html`) and terms (`terms.html`) say that everyone on the Family list can
+see each other's name, email, picks, meal plans and feedback. Update them if that changes.

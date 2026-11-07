@@ -1,5 +1,6 @@
 // Jurong Kitchen menu: renders menu.json, search, language toggle, "my picks", a weekly meal plan,
-// and — when firebase-config.js is filled in — Google sign-in that saves picks and plans per person.
+// and — when served behind Cloudflare Access with the /api functions — saves picks and plans per
+// person, shows who else picked each dish, and a shared feedback board.
 const $ = (id) => document.getElementById(id);
 const store = {
   get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
@@ -11,7 +12,8 @@ const MEALS = [["lunch", "Lunch"], ["dinner", "Dinner"]];
 let menu, dishes = {}, current = null;
 // picks: dish id -> time added (ms). plan: "YYYY-MM-DD" -> { lunch: [ids], dinner: [ids] }.
 let picks = loadPicks(), plan = store.get("plan", {});
-let db = null, user = null, saveTimer = null;
+// me: signed-in email (null when there's no /api, e.g. a plain local server). people: everyone's saved records.
+let me = null, myName = "", people = [], peopleAt = 0, saveTimer = null;
 
 function loadPicks() {
   const v = store.get("picks", {});
@@ -35,7 +37,14 @@ let weekStart = mondayOf(new Date());  // week shown in the meal plan
 function save() {
   store.set("picks", picks);
   store.set("plan", plan);
-  if (user) { clearTimeout(saveTimer); saveTimer = setTimeout(cloudSave, 600); }
+  if (me) { clearTimeout(saveTimer); saveTimer = setTimeout(cloudSave, 600); }
+}
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { "content-type": "application/json", ...opts.headers } });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(data.error || r.status), { status: r.status });
+  return data;
 }
 
 function tidyPlan(p) {
@@ -49,15 +58,21 @@ function tidyPlan(p) {
 }
 
 async function cloudSave() {
-  if (!user || !db) return;
+  if (!me) return;
   try {
-    await db.collection("users").doc(user.uid).set({
-      name: user.displayName || "", email: user.email || "", photo: user.photoURL || "",
-      picks, plan: tidyPlan(plan), updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
+    const rec = await api("/api/state", { method: "PUT", body: JSON.stringify({ name: myName, picks, plan: tidyPlan(plan) }) });
+    people = [...people.filter((p) => p.email !== me), rec];
   } catch (e) {
     toast("Couldn't save to your account — your changes are kept on this device for now.");
   }
+}
+
+async function refreshPeople(maxAgeMs = 30000) {
+  if (!me || Date.now() - peopleAt < maxAgeMs) return;
+  try {
+    people = (await api("/api/state")).people;
+    peopleAt = Date.now();
+  } catch {}
 }
 
 // ---- menu ----
@@ -181,7 +196,24 @@ function openDish(id) {
     .map((d, i) => `<option value="${iso(d)}">${i === 0 ? "Today, " : i === 1 ? "Tomorrow, " : ""}${fmtDay(d)}</option>`).join("");
   $("dMeal").value = today.getHours() >= 14 ? "dinner" : "lunch";
   syncPicks();
+  renderWho();
   $("dish").showModal();
+  refreshPeople().then(() => current?.id === id && renderWho());
+}
+
+// "Picked by Mum, Dad · Planned by Ah Ma (Sat 15 Nov dinner)" for the open dish.
+function renderWho() {
+  const id = current?.id, who = $("dWho");
+  const others = people.filter((p) => p.email !== me);
+  const name = (p) => esc(p.name || p.email.split("@")[0]);
+  const picked = others.filter((p) => p.picks?.[id]).map(name);
+  const planned = others.map((p) => {
+    const days = Object.keys(p.plan || {}).filter((d) => MEALS.some(([m]) => p.plan[d][m]?.includes(id))).sort();
+    return days.length ? `${name(p)} (${days.map((d) => fmtDay(fromIso(d))).join(", ")})` : null;
+  }).filter(Boolean);
+  who.innerHTML = [picked.length && `<strong>Picked by</strong> ${picked.join(", ")}`,
+    planned.length && `<strong>Planned by</strong> ${planned.join(", ")}`].filter(Boolean).join("<br>");
+  who.hidden = !who.innerHTML;
 }
 
 function addToPlan(day, meal, id) {
@@ -233,21 +265,7 @@ function weekText() {
   return lines.length ? `Jurong Kitchen – meal plan, week of ${fmtDay(weekStart)}\n${lines.join("\n")}` : "";
 }
 
-// ---- account ----
-function renderAccount() {
-  const b = $("acctBtn");
-  if (user) {
-    const first = (user.displayName || user.email || "Me").split(" ")[0];
-    b.innerHTML = user.photoURL
-      ? `<img src="${esc(user.photoURL)}" alt="" referrerpolicy="no-referrer"><span>${esc(first)}</span>`
-      : esc(first);
-    b.setAttribute("aria-label", `Signed in as ${user.displayName || user.email}. Tap to sign out.`);
-  } else {
-    b.textContent = "Sign in";
-    b.removeAttribute("aria-label");
-  }
-}
-
+// ---- account (sign-in itself happens at the Cloudflare Access gate, with Google) ----
 function mergeInto(cloud) {
   for (const [id, t] of Object.entries(cloud.picks || {})) if (!picks[id] || t < picks[id]) picks[id] = t;
   for (const [day, meals] of Object.entries(cloud.plan || {})) {
@@ -258,34 +276,70 @@ function mergeInto(cloud) {
   }
 }
 
-async function onAuth(u) {
-  user = u;
-  renderAccount();
-  if (!u) return;
+async function initCloud() {
+  let state;
   try {
-    const snap = await db.collection("users").doc(u.uid).get();
-    // Anything added on this device before signing in joins the account.
-    mergeInto(snap.exists ? snap.data() : {});
-    store.set("picks", picks);
-    store.set("plan", plan);
-    syncPicks();
-    if ($("plan").open) renderPlan();
-    await cloudSave();
+    state = await api("/api/state");
   } catch (e) {
-    toast("Signed in, but couldn't load your saved list. Check your connection.");
+    // No /api here (plain local server) or storage not connected yet: work on this device only.
+    if (e.status === 503) console.warn("Cloudflare KV storage isn't connected — see SETUP.md.");
+    return;
+  }
+  me = state.me;
+  people = state.people;
+  peopleAt = Date.now();
+  try {
+    const id = await (await fetch("/cdn-cgi/access/get-identity")).json();
+    myName = id.name || "";
+  } catch {}
+  const mine = people.find((p) => p.email === me);
+  if (!myName) myName = mine?.name || me.split("@")[0];
+  // The copy on this device belongs to whoever last used it here; don't hand it to someone else.
+  if (store.get("owner", me) !== me) { picks = {}; plan = {}; }
+  store.set("owner", me);
+  mergeInto(mine || {});
+  store.set("picks", picks);
+  store.set("plan", plan);
+  syncPicks();
+  if ($("plan").open) renderPlan();
+  $("familyBtn").hidden = $("fbBtn").hidden = false;
+  $("acctLine").hidden = false;
+  $("acctName").textContent = myName;
+  await cloudSave();
+}
+
+// ---- feedback board ----
+const fmtWhen = (ms) => new Date(ms).toLocaleString("en-SG", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+
+async function loadFeedback() {
+  $("fbList").innerHTML = '<p class="note">Loading…</p>';
+  try {
+    const { messages } = await api("/api/feedback");
+    $("fbList").innerHTML = messages.length ? messages.map((m) => `<article class="msg">
+        <header><strong>${esc(m.name)}</strong> <span class="note">${fmtWhen(m.at)}</span>
+          ${m.email === me ? `<button type="button" class="msgdel" data-delfb="${esc(m.id)}" aria-label="Delete your message">Delete</button>` : ""}</header>
+        <p>${esc(m.text)}</p></article>`).join("")
+      : '<p class="empty">No feedback yet — be the first.</p>';
+  } catch {
+    $("fbList").innerHTML = '<p class="empty">Couldn\'t load feedback. Check your connection.</p>';
   }
 }
 
-async function initCloud() {
+async function sendFeedback() {
+  const text = $("fbText").value.trim();
+  if (!text) return $("fbText").focus();
+  $("fbSend").disabled = true;
   try {
-    db = await loadFirebase();
+    await api("/api/feedback", { method: "POST", body: JSON.stringify({ name: myName, text }) });
+    $("fbText").value = "";
+    store.set("fbDraft", "");
+    toast("Thanks — feedback sent.");
+    loadFeedback();
   } catch (e) {
-    console.warn(e);
-    return;
+    toast(e.message === "too-long" ? "That's a bit long — please keep it under 2,000 characters." : "Couldn't send. Your message is kept here — try again.");
+  } finally {
+    $("fbSend").disabled = false;
   }
-  if (!db) return;
-  $("acctBtn").hidden = false;
-  firebase.auth().onAuthStateChanged(onAuth);
 }
 
 // ---- events ----
@@ -300,6 +354,12 @@ document.addEventListener("click", (e) => {
     plan[day][meal] = plan[day][meal].filter((x) => x !== id);
     save();
     return renderPlan();
+  }
+  const del = e.target.closest("[data-delfb]");
+  if (del) {
+    if (!confirm("Delete your message? This can't be undone.")) return;
+    return api(`/api/feedback?id=${encodeURIComponent(del.dataset.delfb)}`, { method: "DELETE" })
+      .then(loadFeedback, () => toast("Couldn't delete that message."));
   }
   const c = e.target.closest(".card");
   if (c) openDish(c.dataset.id);
@@ -348,28 +408,24 @@ $("planClear").addEventListener("click", () => {
   const keys = Array.from({ length: 7 }, (_, i) => iso(addDays(weekStart, i))).filter((k) => plan[k]);
   if (keys.length && confirm("Remove every dish planned for this week?")) { keys.forEach((k) => delete plan[k]); save(); renderPlan(); }
 });
-$("acctBtn").addEventListener("click", async () => {
-  if (!user) { $("sMsg").textContent = ""; return $("signin").showModal(); }
-  if (!confirm(`Sign out of ${user.displayName || user.email}? Your picks and meal plan stay saved in your account.`)) return;
+$("fbBtn").addEventListener("click", () => {
+  $("fbText").value = store.get("fbDraft", "");
+  $("fb").showModal();
+  loadFeedback();
+});
+$("fbText").addEventListener("input", (e) => store.set("fbDraft", e.target.value));
+$("fbSend").addEventListener("click", sendFeedback);
+$("fbClose").addEventListener("click", () => $("fb").close());
+$("signOut").addEventListener("click", async () => {
+  if (!confirm("Sign out? Your picks and meal plan stay saved in your account.")) return;
   clearTimeout(saveTimer);
   await cloudSave();
   // Detach from the account first so clearing this device below can never be saved over it.
-  user = null;
-  await firebase.auth().signOut();
-  // The device copy belonged to that account; start the next person with a clean slate.
+  me = null;
   picks = {}; plan = {};
   save();
-  syncPicks();
-  renderAccount();
-});
-$("sCancel").addEventListener("click", () => $("signin").close());
-$("sGo").addEventListener("click", async () => {
-  try {
-    await googleSignIn();
-    $("signin").close();
-  } catch (e) {
-    $("sMsg").textContent = `Sign-in didn't work (${e.code || e.message}).`;
-  }
+  store.set("owner", null);
+  location.href = "/cdn-cgi/access/logout";
 });
 
 fetch("menu.json")

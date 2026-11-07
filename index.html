@@ -15,7 +15,8 @@
       <div class="actions">
         <button id="planBtn" class="pill" type="button">Plan</button>
         <button id="pickBtn" class="pill primary" type="button">Picks <span id="pickCount" class="badge">0</span></button>
-        <button id="acctBtn" class="pill acct" type="button" hidden>Sign in</button>
+        <a id="familyBtn" class="pill" href="admin.html" aria-label="Who's picked what" hidden><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M16.5 13.6c2.6.2 4.5 2.1 4.5 4.9"/></svg><span class="lbl"> Family</span></a>
+        <button id="fbBtn" class="pill" type="button" aria-label="Feedback" hidden><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="lbl"> Feedback</span></button>
       </div>
     </div>
     <div class="searchrow">
@@ -27,7 +28,10 @@
 
   <main id="menu"></main>
   <p id="empty" class="empty" hidden>No dishes match your search.</p>
-  <footer class="foot"><a href="privacy">Privacy policy</a> · <a href="terms">Terms of service</a></footer>
+  <footer class="foot">
+    <p id="acctLine" hidden>Signed in as <strong id="acctName"></strong> · <button id="signOut" class="linkbtn" type="button">Sign out</button></p>
+    <a href="privacy">Privacy policy</a> · <a href="terms">Terms of service</a>
+  </footer>
   <p id="toast" class="toast" role="status" hidden></p>
 
   <dialog id="dish" class="sheet">
@@ -36,6 +40,7 @@
       <h2 id="dEn"></h2>
       <p id="dZh" class="zh big"></p>
       <p id="dDesc"></p>
+      <p id="dWho" class="whobox" hidden></p>
       <p class="note">Picture is an AI illustration — the actual dish may look different.</p>
       <div class="planpick">
         <span class="label">Add to meal plan</span>
@@ -84,21 +89,19 @@
     </div>
   </dialog>
 
-  <dialog id="signin" class="sheet">
+  <dialog id="fb" class="sheet wide tall">
     <div class="body">
-      <h2>Sign in with Google</h2>
-      <p>Signing in saves your picks and meal plan to your account, so they follow you to any device.</p>
-      <p class="note">Jurong Kitchen will see your name, email address and the dishes you add.</p>
-      <div class="row">
-        <button id="sCancel" class="pill" type="button">Cancel</button>
-        <button id="sGo" class="pill primary" type="button">Continue with Google</button>
+      <div class="planhead">
+        <h2>Feedback</h2>
+        <button id="fbClose" class="pill" type="button">Close</button>
       </div>
-      <p id="sMsg" class="note" role="status"></p>
+      <p class="note">Ideas, requests or comments about the food or the menu. Everyone in the family can read these.</p>
+      <textarea id="fbText" maxlength="2000" rows="4" placeholder="Type your message…"></textarea>
+      <div class="row"><button id="fbSend" class="pill primary" type="button">Send</button></div>
+      <div id="fbList"></div>
     </div>
   </dialog>
 
-  <script src="firebase-config.js"></script>
-  <script src="cloud.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

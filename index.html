@@ -6,7 +6,7 @@
   <title>Jurong Kitchen Menu</title>
   <meta name="theme-color" content="#8b2c1d">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20261107">
 </head>
 <body>
   <header class="top">
@@ -17,6 +17,7 @@
         <button id="pickBtn" class="pill primary" type="button">Picks <span id="pickCount" class="badge">0</span></button>
         <a id="familyBtn" class="pill" href="admin.html" aria-label="Who's picked what" hidden><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M16.5 13.6c2.6.2 4.5 2.1 4.5 4.9"/></svg><span class="lbl"> Family</span></a>
         <button id="fbBtn" class="pill" type="button" aria-label="Feedback" hidden><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="lbl"> Feedback</span></button>
+        <button id="acctBtn" class="pill acct" type="button" hidden>Sign in</button>
       </div>
     </div>
     <div class="searchrow">
@@ -102,6 +103,22 @@
     </div>
   </dialog>
 
-  <script src="app.js"></script>
+  <dialog id="signin" class="sheet">
+    <div class="body">
+      <h2>Sign in with Google</h2>
+      <p>Signing in saves your picks and meal plan to your account, so they follow you to any device,
+        and lets you see what the family has picked and read or post feedback.</p>
+      <p class="note">Everyone in the family will see your name, email address, the dishes you add and your feedback.</p>
+      <div class="row">
+        <button id="sCancel" class="pill" type="button">Cancel</button>
+        <button id="sGo" class="pill primary" type="button">Continue with Google</button>
+      </div>
+      <p id="sMsg" class="note" role="status"></p>
+    </div>
+  </dialog>
+
+  <script src="firebase-config.js?v=20261107"></script>
+  <script src="cloud.js?v=20261107"></script>
+  <script src="app.js?v=20261107"></script>
 </body>
 </html>

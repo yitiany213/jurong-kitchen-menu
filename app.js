@@ -1,6 +1,6 @@
 // Jurong Kitchen menu: renders menu.json, search, language toggle, "my picks", a weekly meal plan,
-// and — when served behind Cloudflare Access with the /api functions — saves picks and plans per
-// person, shows who else picked each dish, and a shared feedback board.
+// and — when firebase-config.js is filled in — Google sign-in that saves picks and plans per person
+// in Firestore, shows who else picked each dish, and a shared feedback board.
 const $ = (id) => document.getElementById(id);
 const store = {
   get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
@@ -12,8 +12,9 @@ const MEALS = [["lunch", "Lunch"], ["dinner", "Dinner"]];
 let menu, dishes = {}, current = null;
 // picks: dish id -> time added (ms). plan: "YYYY-MM-DD" -> { lunch: [ids], dinner: [ids] }.
 let picks = loadPicks(), plan = store.get("plan", {});
-// me: signed-in email (null when there's no /api, e.g. a plain local server). people: everyone's saved records.
-let me = null, myName = "", people = [], peopleAt = 0, saveTimer = null;
+// user: the signed-in Firebase user (null when signed out or Firebase isn't configured).
+// people: everyone's users/{uid} records, kept live by a Firestore listener.
+let db = null, user = null, people = [], saveTimer = null, stopPeople = null, stopFeedback = null;
 
 function loadPicks() {
   const v = store.get("picks", {});
@@ -37,14 +38,7 @@ let weekStart = mondayOf(new Date());  // week shown in the meal plan
 function save() {
   store.set("picks", picks);
   store.set("plan", plan);
-  if (me) { clearTimeout(saveTimer); saveTimer = setTimeout(cloudSave, 600); }
-}
-
-async function api(path, opts = {}) {
-  const r = await fetch(path, { ...opts, headers: { "content-type": "application/json", ...opts.headers } });
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw Object.assign(new Error(data.error || r.status), { status: r.status });
-  return data;
+  if (user) { clearTimeout(saveTimer); saveTimer = setTimeout(cloudSave, 600); }
 }
 
 function tidyPlan(p) {
@@ -58,22 +52,18 @@ function tidyPlan(p) {
 }
 
 async function cloudSave() {
-  if (!me) return;
+  if (!user || !db) return;
   try {
-    const rec = await api("/api/state", { method: "PUT", body: JSON.stringify({ name: myName, picks, plan: tidyPlan(plan) }) });
-    people = [...people.filter((p) => p.email !== me), rec];
+    await db.collection("users").doc(user.uid).set({
+      name: user.displayName || "", email: (user.email || "").toLowerCase(), photo: user.photoURL || "",
+      picks, plan: tidyPlan(plan), updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
   } catch (e) {
-    toast("Couldn't save to your account — your changes are kept on this device for now.");
+    toast(e.code === "permission-denied" ? notFamily() : "Couldn't save to your account — your changes are kept on this device for now.");
   }
 }
 
-async function refreshPeople(maxAgeMs = 30000) {
-  if (!me || Date.now() - peopleAt < maxAgeMs) return;
-  try {
-    people = (await api("/api/state")).people;
-    peopleAt = Date.now();
-  } catch {}
-}
+const notFamily = () => `${user?.email || "This account"} isn't on the family list yet — ask the owner to add it.`;
 
 // ---- menu ----
 function render() {
@@ -198,14 +188,14 @@ function openDish(id) {
   syncPicks();
   renderWho();
   $("dish").showModal();
-  refreshPeople().then(() => current?.id === id && renderWho());
 }
 
 // "Picked by Mum, Dad · Planned by Ah Ma (Sat 15 Nov dinner)" for the open dish.
 function renderWho() {
   const id = current?.id, who = $("dWho");
-  const others = people.filter((p) => p.email !== me);
-  const name = (p) => esc(p.name || p.email.split("@")[0]);
+  if (!id) return;
+  const others = people.filter((p) => p.uid !== user?.uid);
+  const name = (p) => esc(p.name || (p.email || "someone").split("@")[0]);
   const picked = others.filter((p) => p.picks?.[id]).map(name);
   const planned = others.map((p) => {
     const days = Object.keys(p.plan || {}).filter((d) => MEALS.some(([m]) => p.plan[d][m]?.includes(id))).sort();
@@ -265,7 +255,7 @@ function weekText() {
   return lines.length ? `Jurong Kitchen – meal plan, week of ${fmtDay(weekStart)}\n${lines.join("\n")}` : "";
 }
 
-// ---- account (sign-in itself happens at the Cloudflare Access gate, with Google) ----
+// ---- account ----
 function mergeInto(cloud) {
   for (const [id, t] of Object.entries(cloud.picks || {})) if (!picks[id] || t < picks[id]) picks[id] = t;
   for (const [day, meals] of Object.entries(cloud.plan || {})) {
@@ -276,71 +266,120 @@ function mergeInto(cloud) {
   }
 }
 
-async function initCloud() {
-  let state;
+function renderAccount() {
+  const b = $("acctBtn");
+  b.hidden = !db;
+  $("familyBtn").hidden = $("fbBtn").hidden = !user;
+  $("acctLine").hidden = !user;
+  if (user) {
+    const first = (user.displayName || user.email || "Me").split(" ")[0];
+    b.innerHTML = user.photoURL
+      ? `<img src="${esc(user.photoURL)}" alt="" referrerpolicy="no-referrer"><span>${esc(first)}</span>`
+      : esc(first);
+    b.setAttribute("aria-label", `Signed in as ${user.displayName || user.email}. Tap to sign out.`);
+    $("acctName").textContent = user.displayName || user.email;
+  } else {
+    b.textContent = "Sign in";
+    b.removeAttribute("aria-label");
+  }
+}
+
+// Everyone's records, kept up to date while signed in (for "Picked by" and the Family page).
+function watchPeople() {
+  stopPeople?.();
+  stopPeople = db.collection("users").onSnapshot((snap) => {
+    people = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+    if (current) renderWho();
+  }, (e) => { if (e.code === "permission-denied") toast(notFamily()); });
+}
+
+async function onAuth(u) {
+  user = u;
+  renderAccount();
+  stopPeople?.(); stopPeople = null; people = [];
+  if (!u) return;
+  // The copy on this device belongs to whoever last used it here; don't hand it to someone else.
+  if (store.get("owner", u.uid) !== u.uid) { picks = {}; plan = {}; save(); syncPicks(); }
+  store.set("owner", u.uid);
   try {
-    state = await api("/api/state");
+    const snap = await db.collection("users").doc(u.uid).get();
+    // Anything added on this device before signing in joins the account.
+    mergeInto(snap.exists ? snap.data() : {});
+    store.set("picks", picks);
+    store.set("plan", plan);
+    syncPicks();
+    if ($("plan").open) renderPlan();
+    await cloudSave();
+    watchPeople();
   } catch (e) {
-    // No /api here (plain local server) or storage not connected yet: work on this device only.
-    if (e.status === 503) console.warn("Cloudflare KV storage isn't connected — see SETUP.md.");
+    toast(e.code === "permission-denied" ? notFamily() : "Signed in, but couldn't load your saved list. Check your connection.");
+  }
+}
+
+async function initCloud() {
+  try {
+    db = await loadFirebase();
+  } catch (e) {
+    console.warn(e);
     return;
   }
-  me = state.me;
-  people = state.people;
-  peopleAt = Date.now();
-  try {
-    const id = await (await fetch("/cdn-cgi/access/get-identity")).json();
-    myName = id.name || "";
-  } catch {}
-  const mine = people.find((p) => p.email === me);
-  if (!myName) myName = mine?.name || me.split("@")[0];
-  // The copy on this device belongs to whoever last used it here; don't hand it to someone else.
-  if (store.get("owner", me) !== me) { picks = {}; plan = {}; }
-  store.set("owner", me);
-  mergeInto(mine || {});
-  store.set("picks", picks);
-  store.set("plan", plan);
-  syncPicks();
-  if ($("plan").open) renderPlan();
-  $("familyBtn").hidden = $("fbBtn").hidden = false;
-  $("acctLine").hidden = false;
-  $("acctName").textContent = myName;
-  await cloudSave();
+  if (!db) return;
+  renderAccount();
+  firebase.auth().onAuthStateChanged(onAuth);
 }
 
 // ---- feedback board ----
 const fmtWhen = (ms) => new Date(ms).toLocaleString("en-SG", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
-async function loadFeedback() {
+function watchFeedback() {
   $("fbList").innerHTML = '<p class="note">Loading…</p>';
-  try {
-    const { messages } = await api("/api/feedback");
-    $("fbList").innerHTML = messages.length ? messages.map((m) => `<article class="msg">
-        <header><strong>${esc(m.name)}</strong> <span class="note">${fmtWhen(m.at)}</span>
-          ${m.email === me ? `<button type="button" class="msgdel" data-delfb="${esc(m.id)}" aria-label="Delete your message">Delete</button>` : ""}</header>
-        <p>${esc(m.text)}</p></article>`).join("")
-      : '<p class="empty">No feedback yet — be the first.</p>';
-  } catch {
-    $("fbList").innerHTML = '<p class="empty">Couldn\'t load feedback. Check your connection.</p>';
-  }
+  stopFeedback?.();
+  stopFeedback = db.collection("feedback").orderBy("at", "desc").limit(200).onSnapshot((snap) => {
+    $("fbList").innerHTML = snap.empty ? '<p class="empty">No feedback yet — be the first.</p>'
+      : snap.docs.map((d) => {
+        const m = d.data(), at = m.at?.toMillis?.() ?? Date.now();
+        return `<article class="msg">
+          <header><strong>${esc(m.name || m.email)}</strong> <span class="note">${fmtWhen(at)}</span>
+            ${m.uid === user?.uid ? `<button type="button" class="msgdel" data-delfb="${esc(d.id)}" aria-label="Delete your message">Delete</button>` : ""}</header>
+          <p>${esc(m.text)}</p></article>`;
+      }).join("");
+  }, (e) => {
+    $("fbList").innerHTML = `<p class="empty">${e.code === "permission-denied" ? esc(notFamily()) : "Couldn't load feedback. Check your connection."}</p>`;
+  });
 }
 
 async function sendFeedback() {
   const text = $("fbText").value.trim();
   if (!text) return $("fbText").focus();
+  if (text.length > 2000) return toast("That's a bit long — please keep it under 2,000 characters.");
   $("fbSend").disabled = true;
   try {
-    await api("/api/feedback", { method: "POST", body: JSON.stringify({ name: myName, text }) });
+    await db.collection("feedback").add({
+      uid: user.uid, name: user.displayName || "", email: (user.email || "").toLowerCase(),
+      text, at: firebase.firestore.FieldValue.serverTimestamp(),
+    });
     $("fbText").value = "";
     store.set("fbDraft", "");
     toast("Thanks — feedback sent.");
-    loadFeedback();
   } catch (e) {
-    toast(e.message === "too-long" ? "That's a bit long — please keep it under 2,000 characters." : "Couldn't send. Your message is kept here — try again.");
+    toast(e.code === "permission-denied" ? notFamily() : "Couldn't send. Your message is kept here — try again.");
   } finally {
     $("fbSend").disabled = false;
   }
 }
+
+// Start loading the menu before wiring up buttons, so a problem with one button can never leave the page empty.
+fetch("menu.json")
+  .then((r) => r.json())
+  .then((m) => {
+    menu = m;
+    menu.categories.forEach((c) => c.dishes.forEach((d) => (dishes[d.id] = d)));
+    render();
+    setLang(store.get("zhfirst", false));
+    watchSections();
+    initCloud();
+  })
+  .catch(() => { $("menu").innerHTML = '<p class="empty">Couldn\'t load the menu. Start it with Run.bat.</p>'; });
 
 // ---- events ----
 document.addEventListener("click", (e) => {
@@ -358,8 +397,8 @@ document.addEventListener("click", (e) => {
   const del = e.target.closest("[data-delfb]");
   if (del) {
     if (!confirm("Delete your message? This can't be undone.")) return;
-    return api(`/api/feedback?id=${encodeURIComponent(del.dataset.delfb)}`, { method: "DELETE" })
-      .then(loadFeedback, () => toast("Couldn't delete that message."));
+    return db.collection("feedback").doc(del.dataset.delfb).delete()
+      .catch(() => toast("Couldn't delete that message."));
   }
   const c = e.target.closest(".card");
   if (c) openDish(c.dataset.id);
@@ -411,31 +450,40 @@ $("planClear").addEventListener("click", () => {
 $("fbBtn").addEventListener("click", () => {
   $("fbText").value = store.get("fbDraft", "");
   $("fb").showModal();
-  loadFeedback();
+  watchFeedback();
 });
+$("fb").addEventListener("close", () => { stopFeedback?.(); stopFeedback = null; });
 $("fbText").addEventListener("input", (e) => store.set("fbDraft", e.target.value));
 $("fbSend").addEventListener("click", sendFeedback);
 $("fbClose").addEventListener("click", () => $("fb").close());
-$("signOut").addEventListener("click", async () => {
-  if (!confirm("Sign out? Your picks and meal plan stay saved in your account.")) return;
+
+async function signOut() {
+  if (!confirm(`Sign out of ${user.displayName || user.email}? Your picks and meal plan stay saved in your account.`)) return;
   clearTimeout(saveTimer);
   await cloudSave();
   // Detach from the account first so clearing this device below can never be saved over it.
-  me = null;
+  user = null;
+  stopPeople?.(); stopPeople = null;
+  await firebase.auth().signOut();
+  // The device copy belonged to that account; start the next person with a clean slate.
   picks = {}; plan = {};
   save();
   store.set("owner", null);
-  location.href = "/cdn-cgi/access/logout";
+  syncPicks();
+  renderAccount();
+}
+$("signOut").addEventListener("click", signOut);
+$("acctBtn").addEventListener("click", () => {
+  if (user) return signOut();
+  $("sMsg").textContent = "";
+  $("signin").showModal();
 });
-
-fetch("menu.json")
-  .then((r) => r.json())
-  .then((m) => {
-    menu = m;
-    menu.categories.forEach((c) => c.dishes.forEach((d) => (dishes[d.id] = d)));
-    render();
-    setLang(store.get("zhfirst", false));
-    watchSections();
-    initCloud();
-  })
-  .catch(() => { $("menu").innerHTML = '<p class="empty">Couldn\'t load the menu. Start it with Run.bat.</p>'; });
+$("sCancel").addEventListener("click", () => $("signin").close());
+$("sGo").addEventListener("click", async () => {
+  try {
+    await googleSignIn();
+    $("signin").close();
+  } catch (e) {
+    $("sMsg").textContent = `Sign-in didn't work (${e.code || e.message}).`;
+  }
+});

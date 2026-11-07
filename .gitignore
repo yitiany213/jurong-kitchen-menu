@@ -10,5 +10,4 @@ site/
 *.log
 __pycache__/
 
-# Local test data from dev_server.py
-.devdata.json
+

@@ -1,12 +1,12 @@
 // Family page: every signed-in person's picks and meal plans, by dish and by person.
-// Anyone past the Cloudflare Access gate (the Family list) can see this; data comes from /api/state.
+// Anyone signed in with a Google account on the family list (Firestore config/family) can see this.
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const MEALS = [["lunch", "Lunch"], ["dinner", "Dinner"]];
 const fmtDate = (ms) => new Date(ms).toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" });
 const fmtDay = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString("en-SG", { weekday: "short", day: "numeric", month: "short" }); };
 
-let dishes = {}, order = [], me = null;
+let dishes = {}, order = [], me = null, db = null, stop = null;
 
 function setStatus(msg) { $("status").textContent = msg; }
 
@@ -45,7 +45,7 @@ function renderByPerson(people) {
     return `<article class="person">
       <header>
         <div><h3>${esc(p.name || "(no name)")}${p.email === me ? " (you)" : ""}</h3><div class="email">${esc(p.email)}</div>
-        ${p.updatedAt ? `<div class="updated">Last change ${fmtDate(p.updatedAt)}</div>` : ""}</div></header>
+        ${p.updatedAt?.toMillis ? `<div class="updated">Last change ${fmtDate(p.updatedAt.toMillis())}</div>` : ""}</div></header>
       <h4>Picks (${picks.length})</h4>
       ${picks.length ? `<ul>${picks.map(([id, t]) => `<li>${esc(dishes[id].en)} <small class="zh">${esc(dishes[id].zh)}</small> <span class="when">added ${fmtDate(t)}</span></li>`).join("")}</ul>` : '<p class="note">None</p>'}
       <h4>Meal plan</h4>
@@ -55,21 +55,20 @@ function renderByPerson(people) {
   }).join("")}</div>`;
 }
 
-async function load() {
+function watch() {
   setStatus("Loading…");
-  try {
-    const r = await fetch("/api/state");
-    if (!r.ok) throw new Error(r.status === 503 ? "storage isn't connected yet — see SETUP.md" : `error ${r.status}`);
-    const data = await r.json();
-    me = data.me;
-    const people = data.people.sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+  stop?.();
+  stop = db.collection("users").onSnapshot((snap) => {
+    const people = snap.docs.map((d) => d.data()).sort((a, b) => (a.name || a.email || "").localeCompare(b.name || b.email || ""));
     renderByDish(people);
     renderByPerson(people);
-    setStatus(`${people.length} ${people.length === 1 ? "person has" : "people have"} used the menu.`);
-  } catch (e) {
+    setStatus(`${people.length} ${people.length === 1 ? "person has" : "people have"} signed in.`);
+  }, (e) => {
     $("byDish").innerHTML = $("byPerson").innerHTML = "";
-    setStatus(`Couldn't load who picked what (${e.message}). This page only works on the live site.`);
-  }
+    setStatus(e.code === "permission-denied"
+      ? `${me} isn't on the family list yet — ask the owner to add it.`
+      : `Couldn't load who picked what (${e.code || e.message}).`);
+  });
 }
 
 document.querySelectorAll("[data-view]").forEach((a) => a.addEventListener("click", (e) => {
@@ -79,8 +78,23 @@ document.querySelectorAll("[data-view]").forEach((a) => a.addEventListener("clic
   $("byPerson").hidden = a.dataset.view !== "person";
 }));
 
+$("acctBtn").addEventListener("click", async () => {
+  if (me) { await firebase.auth().signOut(); return; }
+  try { await googleSignIn(); } catch (e) { setStatus(`Sign-in didn't work (${e.code || e.message}).`); }
+});
+
 (async () => {
   const menu = await (await fetch("menu.json")).json();
   menu.categories.forEach((c) => c.dishes.forEach((d) => { dishes[d.id] = d; order.push(d.id); }));
-  load();
+  try { db = await loadFirebase(); } catch (e) { return setStatus(`Couldn't load Firebase (${e.message}).`); }
+  if (!db) return setStatus("Sign-in isn't set up yet (firebase-config.js is empty — see SETUP.md).");
+  $("acctBtn").hidden = false;
+  firebase.auth().onAuthStateChanged((u) => {
+    me = u ? (u.email || "").toLowerCase() : null;
+    $("acctBtn").textContent = u ? "Sign out" : "Sign in";
+    if (u) return watch();
+    stop?.(); stop = null;
+    $("byDish").innerHTML = $("byPerson").innerHTML = "";
+    setStatus("Sign in with Google to see what the family has picked.");
+  });
 })();

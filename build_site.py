@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SITE = ROOT / "site"
-FILES = ["index.html", "admin.html", "privacy.html", "app.js", "admin.js", "cloud.js", "firebase-config.js",
+FILES = ["index.html", "admin.html", "privacy.html", "terms.html", "app.js", "admin.js", "cloud.js", "firebase-config.js",
          "style.css", "admin.css", "menu.json", "manifest.json"]
 
 if SITE.exists():

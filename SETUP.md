@@ -4,7 +4,7 @@ The menu works without any of this: picks and meal plans are then saved on each 
 These steps turn on **Sign in with Google** so each person's picks and meal plan are saved to
 their account, and you can see **who added which dish** on `admin.html`.
 
-Everything below is free for a family-sized site (Firebase "Spark" plan, GitHub Pages).
+Everything below is free for a family-sized site (Firebase "Spark" plan, Cloudflare Pages and Access).
 Takes about 20 minutes.
 
 ## 1. Create a Firebase project
@@ -46,12 +46,13 @@ The rules let each person read and change only their own list, and let only the 
 
 ## 5. Publish the website
 
-The site is already published with GitHub Pages at
-<https://yitiany213.github.io/jurong-kitchen-menu/>, from the `main` branch of
-<https://github.com/yitiany213/jurong-kitchen-menu>.
+The site is published with Cloudflare Pages (project `jurongkitchen`) at
+<https://jurongkitchen.yitiany.com>, from the `main` branch of
+<https://github.com/yitiany213/jurong-kitchen-menu>. Cloudflare Access limits it to the Gmail
+addresses listed in the Zero Trust policy; only `/privacy` is open to everyone.
 
 1. Firebase console → **Authentication → Settings → Authorized domains → Add domain** →
-   `yitiany213.github.io`. Sign-in won't work on the live site until you do this.
+   `jurongkitchen.yitiany.com`. Sign-in won't work on the live site until you do this.
 2. Commit and push the `firebase-config.js` and `firestore.rules` changes from steps 3–4:
 
    ```
@@ -60,11 +61,14 @@ The site is already published with GitHub Pages at
    git push
    ```
 
-To update the site later: change files here, then commit and push. GitHub Pages republishes in a minute or two.
+To update the site later: change files here, then commit and push. Cloudflare republishes in a minute or two.
+
+To let someone new in: add their Gmail to the Access policy in Cloudflare Zero Trust (and, if the
+Google app is still in Testing, to **Test users** in Google Auth Platform → Audience).
 
 ## 6. See who added what
 
-Open <https://yitiany213.github.io/jurong-kitchen-menu/admin.html> and sign in with an owner account.
+Open <https://jurongkitchen.yitiany.com/admin> and sign in with an owner account.
 
 - **By dish** — each dish with the people who picked it (and when) and whose meal plans it's in (and which days).
 - **By person** — each person's name, email, picks with dates, and their meal plan.
